@@ -75,7 +75,7 @@ var optMap = options.Map{
 // color tags for app name and version
 var colorTagApp, colorTagVer string
 
-// textColors is map with level textColors
+// textColors is map with message text colors
 var textColors = map[string]string{
 	"":      "",
 	"debug": "{s}",
@@ -85,7 +85,7 @@ var textColors = map[string]string{
 	"fatal": "{#196}",
 }
 
-// textColors is map with level textColors
+// textColors is a map with marker colors
 var markerColors = map[string]string{
 	"":      "{s-}",
 	"debug": "{s-}",
@@ -95,6 +95,7 @@ var markerColors = map[string]string{
 	"fatal": "{#196}",
 }
 
+// labels is a map with level labels
 var labels = map[string]string{
 	"warn":  "WARN",
 	"error": "ERR",
@@ -156,6 +157,10 @@ func preConfigureUI() {
 	default:
 		colorTagApp, colorTagVer = "{*}{c}", "{c}"
 	}
+
+	fmtutil.SeparatorColorTag = "{s-}"
+	fmtutil.SeparatorTitleColorTag = "{s-}"
+	fmtutil.SeparatorTitleAlign = "c"
 }
 
 // configureUI configures user interface
@@ -218,12 +223,12 @@ func readDataFollow(filter string) {
 
 		line = strings.TrimRight(line, "\r\n")
 
-		if time.Since(lastPrint) > time.Minute {
-			fmtutil.Separator(true)
-		}
-
 		if filter != "" && !strings.Contains(line, filter) {
 			continue
+		}
+
+		if time.Since(lastPrint) > 30*time.Second {
+			fmtutil.Separator(true, timeutil.ShortDuration(lastPrint, false))
 		}
 
 		renderLine(line)
