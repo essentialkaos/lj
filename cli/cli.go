@@ -398,8 +398,9 @@ func genUsage() *usage.Info {
 
 	info.AddSpoiler(`You can filter log records using a simple query language.
 
-  {s}•{!} {c}field{!}{s}:{!}{b}value{!}  {s}—{!} positive search
-  {s}•{!} {c}field{!}{s}:{!}{r}!{!}{b}value{!} {s}—{!} negative search
+  {s}•{!} {b}value{!}        {s}—{!} search for occurrences in {c}msg{!} field
+  {s}•{!} {c}field{!}{s}:{!}{b}value{!}  {s}—{!} positive exact search
+  {s}•{!} {c}field{!}{s}:{!}{r}!{!}{b}value{!} {s}—{!} negative exact search
   {s}•{!} {c}field{!}{s}:{!}{r}~{!}{b}value{!} {s}—{!} search for occurrences
   {s}•{!} {c}field{!}{s}:{!}{r}>{!}{b}value{!} {s}—{!} equal or greater
   {s}•{!} {c}field{!}{s}:{!}{r}<{!}{b}value{!} {s}—{!} equal or less`)
