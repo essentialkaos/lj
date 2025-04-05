@@ -38,7 +38,7 @@ import (
 // Basic utility info
 const (
 	APP  = "lj"
-	VER  = "0.0.1"
+	VER  = "0.1.0"
 	DESC = "Tool for viewing JSON logs"
 )
 
@@ -78,10 +78,10 @@ var colorTagApp, colorTagVer string
 // textColors is map with message text colors
 var textColors = map[string]string{
 	"":      "",
-	"debug": "{s}",
+	"debug": "{s-}",
 	"info":  "",
 	"warn":  "{#220}",
-	"error": "{#214}",
+	"error": "{#208}",
 	"fatal": "{#196}",
 }
 
@@ -91,7 +91,7 @@ var markerColors = map[string]string{
 	"debug": "{s-}",
 	"info":  "{s-}",
 	"warn":  "{#220}",
-	"error": "{#214}",
+	"error": "{#208}",
 	"fatal": "{#196}",
 }
 
@@ -133,12 +133,17 @@ func Run(gitRev string, gomod []byte) {
 			WithDeps(deps.Extract(gomod)).
 			Print()
 		os.Exit(0)
-	case options.GetB(OPT_HELP) || !hasStdinData():
+	case options.GetB(OPT_HELP) || (!hasStdinData() && len(args) == 0):
 		genUsage().Print()
 		os.Exit(0)
 	}
 
-	process(args)
+	err := process(args)
+
+	if err != nil {
+		terminal.Error(err.Error())
+		os.Exit(1)
+	}
 }
 
 // ////////////////////////////////////////////////////////////////////////////////// //
@@ -171,19 +176,40 @@ func configureUI() {
 }
 
 // process starts arguments processing
-func process(args options.Arguments) {
-	filter := args.Get(0).String()
+func process(args options.Arguments) error {
+	source, filters, err := getDataSource(args)
+
+	if err != nil {
+		return err
+	}
 
 	if options.GetB(OPT_FOLLOW) {
-		readDataFollow(filter)
+		readDataStream(source, parseFilters(filters))
 	} else {
-		readData(filter)
+		readData(source, parseFilters(filters))
 	}
+
+	return nil
 }
 
-// readData reads all data passed into stdin
-func readData(filter string) {
-	r := bufio.NewReader(os.Stdin)
+// getSource returns data source
+func getDataSource(args options.Arguments) (*os.File, []string, error) {
+	if hasStdinData() {
+		return os.Stdin, args.Strings(), nil
+	}
+
+	fd, err := os.OpenFile(args.Get(0).Clean().String(), os.O_RDONLY, 0)
+
+	if err != nil {
+		return nil, nil, fmt.Errorf("Can't open file for reading: %w", err)
+	}
+
+	return fd, args[1:].Strings(), nil
+}
+
+// readData reads all data from given source
+func readData(source *os.File, filters Filters) {
+	r := bufio.NewReader(source)
 	s := bufio.NewScanner(r)
 
 	if options.GetB(OPT_PAGER) {
@@ -200,17 +226,15 @@ func readData(filter string) {
 			continue
 		}
 
-		if filter != "" && !strings.Contains(data, filter) {
-			continue
-		}
-
-		renderLine(data)
+		renderLine(data, filters)
 	}
+
+	source.Close()
 }
 
-// readData reads stream of data passing into stdin
-func readDataFollow(filter string) {
-	r := bufio.NewReader(os.Stdin)
+// readDataStream reads stream of data from given source
+func readDataStream(source *os.File, filters Filters) {
+	r := bufio.NewReader(source)
 	lastPrint := time.Now()
 
 	for {
@@ -223,29 +247,30 @@ func readDataFollow(filter string) {
 
 		line = strings.TrimRight(line, "\r\n")
 
-		if filter != "" && !strings.Contains(line, filter) {
-			continue
-		}
-
 		if time.Since(lastPrint) > 30*time.Second {
 			fmtutil.Separator(true, timeutil.ShortDuration(lastPrint, false))
 		}
 
-		renderLine(line)
-		lastPrint = time.Now()
+		if renderLine(line, filters) {
+			lastPrint = time.Now()
+		}
 	}
 }
 
 // renderLine renders log line
-func renderLine(line string) {
+func renderLine(line string, filters Filters) bool {
+	info := gjson.Parse(line).Map()
+
+	if !filters.IsMatch(info) {
+		return false
+	}
+
 	var msg, level, caller string
 	var ts float64
 
-	info := gjson.Parse(line).Map()
-
 	for k, v := range info {
 		switch k {
-		case "msg":
+		case "msg", "log":
 			msg = v.String()
 			delete(info, k)
 		case "level":
@@ -261,7 +286,7 @@ func renderLine(line string) {
 	}
 
 	if msg == "" {
-		return
+		return false
 	}
 
 	recDate := time.UnixMicro(int64(ts * 1_000_000))
@@ -294,6 +319,8 @@ func renderLine(line string) {
 
 		renderFields(level, prefixSize, info)
 	}
+
+	return true
 }
 
 // renderFields renders log fields
@@ -367,7 +394,15 @@ func printMan() {
 
 // genUsage generates usage info
 func genUsage() *usage.Info {
-	info := usage.NewInfo("", "?filter")
+	info := usage.NewInfo("", "?source|filter", "?filter…")
+
+	info.AddSpoiler(`You can filter log records using a simple query language.
+
+  {s}•{!} {c}field{!}{s}:{!}{b}value{!}  {s}—{!} positive search
+  {s}•{!} {c}field{!}{s}:{!}{r}!{!}{b}value{!} {s}—{!} negative search
+  {s}•{!} {c}field{!}{s}:{!}{r}~{!}{b}value{!} {s}—{!} search for occurrences
+  {s}•{!} {c}field{!}{s}:{!}{r}>{!}{b}value{!} {s}—{!} equal or greater
+  {s}•{!} {c}field{!}{s}:{!}{r}<{!}{b}value{!} {s}—{!} equal or less`)
 
 	info.AppNameColorTag = colorTagApp
 
@@ -378,23 +413,33 @@ func genUsage() *usage.Info {
 	info.AddOption(OPT_VER, "Show version")
 
 	info.AddRawExample(
+		"lj log.json",
+		"Read log file",
+	)
+
+	info.AddRawExample(
 		"lj < log.json",
-		"Read log file from redirect",
+		"Read log file with redirect",
 	)
 
 	info.AddRawExample(
-		"lj --pager < log.json",
-		"Read log file from redirect with pager",
+		"lj -P log.json",
+		"Read log file with pager",
 	)
 
 	info.AddRawExample(
-		"tail -100 log.json | lj",
-		"Read log file from the tail",
+		"tail -100 log.json | lj ",
+		"Read log file from the tail and filter data",
 	)
 
 	info.AddRawExample(
-		"kubectl logs -f mypod | lj --follow",
+		"kubectl logs -f mypod | lj -F",
 		"Read log from k8s pod",
+	)
+
+	info.AddRawExample(
+		"lj log.json level:warn 'caller:~app/db.go' 'proc-time:>15'",
+		"Read log file and filter records",
 	)
 
 	return info
