@@ -38,7 +38,7 @@ import (
 // Basic utility info
 const (
 	APP  = "lj"
-	VER  = "0.1.0"
+	VER  = "0.1.1"
 	DESC = "Tool for viewing JSON logs"
 )
 
@@ -400,10 +400,10 @@ func genUsage() *usage.Info {
 
   {s}•{!} {b}value{!}        {s}—{!} search for occurrences in {c}msg{!} field
   {s}•{!} {c}field{!}{s}:{!}{b}value{!}  {s}—{!} positive exact search
-  {s}•{!} {c}field{!}{s}:{!}{r}!{!}{b}value{!} {s}—{!} negative exact search
-  {s}•{!} {c}field{!}{s}:{!}{r}~{!}{b}value{!} {s}—{!} search for occurrences
-  {s}•{!} {c}field{!}{s}:{!}{r}>{!}{b}value{!} {s}—{!} equal or greater
-  {s}•{!} {c}field{!}{s}:{!}{r}<{!}{b}value{!} {s}—{!} equal or less`)
+  {s}•{!} {c}field{!}{s}:{!}{y}!{!}{b}value{!} {s}—{!} negative exact search
+  {s}•{!} {c}field{!}{s}:{!}{y}~{!}{b}value{!} {s}—{!} search for occurrences
+  {s}•{!} {c}field{!}{s}:{!}{y}>{!}{b}value{!} {s}—{!} equal or greater
+  {s}•{!} {c}field{!}{s}:{!}{y}<{!}{b}value{!} {s}—{!} equal or less`)
 
 	info.AppNameColorTag = colorTagApp
 
