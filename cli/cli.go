@@ -59,6 +59,14 @@ const (
 
 // ////////////////////////////////////////////////////////////////////////////////// //
 
+// Field is JSON field
+type Field struct {
+	Name  string
+	Value string
+}
+
+// ////////////////////////////////////////////////////////////////////////////////// //
+
 // optMap contains information about all supported options
 var optMap = options.Map{
 	OPT_FOLLOW:   {Type: options.BOOL},
@@ -259,33 +267,47 @@ func readDataStream(source *os.File, filters Filters) {
 
 // renderLine renders log line
 func renderLine(line string, filters Filters) bool {
-	info := gjson.Parse(line).Map()
+	var msg, level, caller string
+	var ts float64
+	var fields []Field
 
-	if !filters.IsMatch(info) {
+	json := gjson.Parse(line)
+
+	json.ForEach(func(k, v gjson.Result) bool {
+		key := k.String()
+
+		switch key {
+		case "msg", "log":
+			msg = v.String()
+		case "level":
+			level = v.String()
+		case "caller":
+			caller = v.String()
+		case "ts":
+			ts = v.Float()
+		default:
+			switch v.Type {
+			case gjson.String:
+				fields = append(fields, Field{key, fmt.Sprintf("\"%s\"", v.Value())})
+			case gjson.False, gjson.True:
+				fields = append(fields, Field{key, fmt.Sprintf("%t", v.Bool())})
+			case gjson.Null:
+				fields = append(fields, Field{key, "nil"})
+			case gjson.Number:
+				fields = append(fields, Field{key, v.String()})
+			default:
+				fields = append(fields, Field{key, fmt.Sprintf("%v", v.Value())})
+			}
+		}
+
+		return true
+	})
+
+	if msg == "" {
 		return false
 	}
 
-	var msg, level, caller string
-	var ts float64
-
-	for k, v := range info {
-		switch k {
-		case "msg", "log":
-			msg = v.String()
-			delete(info, k)
-		case "level":
-			level = v.String()
-			delete(info, k)
-		case "caller":
-			caller = v.String()
-			delete(info, k)
-		case "ts":
-			ts = v.Float()
-			delete(info, k)
-		}
-	}
-
-	if msg == "" {
+	if len(filters) != 0 && !filters.IsMatch(json.Map()) {
 		return false
 	}
 
@@ -310,44 +332,33 @@ func renderLine(line string, filters Filters) bool {
 
 	fmtc.Printf(textColors[level]+"%s{!}\n", msg)
 
-	if len(info) != 0 {
+	if len(fields) != 0 {
 		prefixSize := 26
 
 		if caller != "" {
 			prefixSize += len(caller) + 3
 		}
 
-		renderFields(level, prefixSize, info)
+		renderFields(level, prefixSize, fields)
 	}
 
 	return true
 }
 
 // renderFields renders log fields
-func renderFields(level string, prefixSize int, fields map[string]gjson.Result) {
-	var f, m string
+func renderFields(level string, prefixSize int, fields []Field) {
+	var m string
 
-	for k, v := range fields {
-		switch v.Type {
-		case gjson.String:
-			f = fmt.Sprintf("%s:\"%v\"", k, v.Value())
-		case gjson.False, gjson.True:
-			f = fmt.Sprintf("%s:%t", k, v.Bool())
-		case gjson.Null:
-			f = fmt.Sprintf("%s:nil", k)
-		case gjson.Number:
-			f = fmt.Sprintf("%s:%s", k, v.String())
-		default:
-			f = fmt.Sprintf("%s:%v", k, v.Value())
-		}
+	for _, f := range fields {
+		ff := f.Name + ":" + f.Value
 
-		if len(m)+len(f) > 88 {
+		if len(m)+len(ff) > 88 {
 			fmtc.Print(markerColors[level] + "▎{!}" + strings.Repeat(" ", prefixSize))
 			fmtc.Printfn("{#65}%s{!}", strings.TrimRight(m, " •"))
 			m = ""
 		}
 
-		m += f + " • "
+		m += ff + " • "
 	}
 
 	fmtc.Print(markerColors[level] + "▎{!}" + strings.Repeat(" ", prefixSize))
