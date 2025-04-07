@@ -38,7 +38,7 @@ import (
 // Basic utility info
 const (
 	APP  = "lj"
-	VER  = "0.1.1"
+	VER  = "0.1.2"
 	DESC = "Tool for viewing JSON logs"
 )
 
@@ -335,6 +335,8 @@ func renderFields(level string, prefixSize int, fields map[string]gjson.Result) 
 			f = fmt.Sprintf("%s:%t", k, v.Bool())
 		case gjson.Null:
 			f = fmt.Sprintf("%s:nil", k)
+		case gjson.Number:
+			f = fmt.Sprintf("%s:%s", k, v.String())
 		default:
 			f = fmt.Sprintf("%s:%v", k, v.Value())
 		}
