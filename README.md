@@ -12,6 +12,10 @@
 
 `lj` is is a tool for viewing JSON logs.
 
+### Screenshots
+
+<p align="center"><img src=".github/images/preview.png" alt="lj preview"></p>
+
 ### Installation
 
 #### From source
