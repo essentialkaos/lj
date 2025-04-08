@@ -38,7 +38,7 @@ import (
 // Basic utility info
 const (
 	APP  = "lj"
-	VER  = "0.1.3"
+	VER  = "1.0.3"
 	DESC = "Tool for viewing JSON logs"
 )
 
