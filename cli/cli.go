@@ -38,7 +38,7 @@ import (
 // Basic utility info
 const (
 	APP  = "lj"
-	VER  = "0.1.2"
+	VER  = "0.1.3"
 	DESC = "Tool for viewing JSON logs"
 )
 
@@ -256,7 +256,7 @@ func readDataStream(source *os.File, filters Filters) {
 		line = strings.TrimRight(line, "\r\n")
 
 		if time.Since(lastPrint) > 30*time.Second {
-			fmtutil.Separator(true, timeutil.ShortDuration(lastPrint, false))
+			fmtutil.Separator(true, timeutil.ShortDuration(time.Since(lastPrint), false))
 		}
 
 		if renderLine(line, filters) {
