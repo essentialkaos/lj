@@ -49,6 +49,7 @@ const (
 const (
 	OPT_PAGER    = "P:pager"
 	OPT_FOLLOW   = "F:follow"
+	OPT_STRICT   = "S:strict"
 	OPT_NO_COLOR = "nc:no-color"
 	OPT_HELP     = "h:help"
 	OPT_VER      = "v:version"
@@ -83,6 +84,7 @@ type Field struct {
 var optMap = options.Map{
 	OPT_FOLLOW:   {Type: options.BOOL},
 	OPT_PAGER:    {Type: options.BOOL},
+	OPT_STRICT:   {Type: options.BOOL},
 	OPT_NO_COLOR: {Type: options.BOOL},
 	OPT_HELP:     {Type: options.BOOL},
 	OPT_VER:      {Type: options.MIXED},
@@ -130,6 +132,9 @@ var labels = map[string]string{
 	"error": "ERR",
 	"fatal": "CRIT",
 }
+
+// strictMode strict mode flag
+var strictMode bool
 
 // ////////////////////////////////////////////////////////////////////////////////// //
 
@@ -212,6 +217,8 @@ func process(args options.Arguments) error {
 		return err
 	}
 
+	strictMode = options.GetB(OPT_STRICT)
+
 	if options.GetB(OPT_FOLLOW) {
 		readDataStream(source, parseFilters(filters))
 	} else {
@@ -293,6 +300,16 @@ func renderLine(line string, filters Filters) bool {
 	var fields []Field
 
 	json := gjson.Parse(line)
+
+	if !json.IsObject() {
+		if strictMode {
+			return false
+		}
+
+		fmtc.Printfn("{#169}▎{!}{s-}%s{!}", line)
+
+		return true
+	}
 
 	json.ForEach(func(k, v gjson.Result) bool {
 		key := k.String()
@@ -467,6 +484,7 @@ func genUsage() *usage.Info {
 
 	info.AddOption(OPT_FOLLOW, "Read log stream")
 	info.AddOption(OPT_PAGER, "Paginate output")
+	info.AddOption(OPT_STRICT, "Don't print non-JSON data")
 	info.AddOption(OPT_NO_COLOR, "Disable colors in output")
 	info.AddOption(OPT_HELP, "Show this help message")
 	info.AddOption(OPT_VER, "Show version")
