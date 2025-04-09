@@ -9,6 +9,7 @@ package cli
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 	"strings"
@@ -38,7 +39,7 @@ import (
 // Basic utility info
 const (
 	APP  = "lj"
-	VER  = "0.1.3"
+	VER  = "0.2.0"
 	DESC = "Tool for viewing JSON logs"
 )
 
@@ -59,10 +60,21 @@ const (
 
 // ////////////////////////////////////////////////////////////////////////////////// //
 
+const (
+	TYPE_UNKNOWN uint8 = iota
+	TYPE_STRING
+	TYPE_NUMBER
+	TYPE_BOOL
+	TYPE_NIL
+)
+
+// ////////////////////////////////////////////////////////////////////////////////// //
+
 // Field is JSON field
 type Field struct {
 	Name  string
 	Value string
+	Type  uint8
 }
 
 // ////////////////////////////////////////////////////////////////////////////////// //
@@ -101,6 +113,15 @@ var markerColors = map[string]string{
 	"warn":  "{#220}",
 	"error": "{#208}",
 	"fatal": "{#196}",
+}
+
+// typeColors is a maps with field types colors
+var typeColors = map[uint8]string{
+	TYPE_UNKNOWN: "",
+	TYPE_STRING:  "{#65}",
+	TYPE_NUMBER:  "{*}{#109}",
+	TYPE_NIL:     "{*}{s}",
+	TYPE_BOOL:    "{#74}",
 }
 
 // labels is a map with level labels
@@ -288,15 +309,15 @@ func renderLine(line string, filters Filters) bool {
 		default:
 			switch v.Type {
 			case gjson.String:
-				fields = append(fields, Field{key, fmt.Sprintf("\"%s\"", v.Value())})
+				fields = append(fields, Field{key, fmt.Sprintf("\"%s\"", v.Value()), TYPE_STRING})
 			case gjson.False, gjson.True:
-				fields = append(fields, Field{key, fmt.Sprintf("%t", v.Bool())})
+				fields = append(fields, Field{key, fmt.Sprintf("%t", v.Bool()), TYPE_BOOL})
 			case gjson.Null:
-				fields = append(fields, Field{key, "nil"})
+				fields = append(fields, Field{key, "nil", TYPE_NIL})
 			case gjson.Number:
-				fields = append(fields, Field{key, v.String()})
+				fields = append(fields, Field{key, v.String(), TYPE_NUMBER})
 			default:
-				fields = append(fields, Field{key, fmt.Sprintf("%v", v.Value())})
+				fields = append(fields, Field{key, fmt.Sprintf("%v", v.Value()), TYPE_UNKNOWN})
 			}
 		}
 
@@ -327,7 +348,7 @@ func renderLine(line string, filters Filters) bool {
 	}
 
 	if caller != "" {
-		fmtc.Printf("{s-}(%s){!} ", caller)
+		fmtc.Printf("{s-}({&}%s{!&}){!} ", caller)
 	}
 
 	fmtc.Printf(textColors[level]+"%s{!}\n", msg)
@@ -347,22 +368,35 @@ func renderLine(line string, filters Filters) bool {
 
 // renderFields renders log fields
 func renderFields(level string, prefixSize int, fields []Field) {
-	var m string
+	var lineLen int
+
+	buf := &bytes.Buffer{}
 
 	for _, f := range fields {
-		ff := f.Name + ":" + f.Value
-
-		if len(m)+len(ff) > 88 {
+		if lineLen > 0 && lineLen+f.Size() > 88 {
 			fmtc.Print(markerColors[level] + "▎{!}" + strings.Repeat(" ", prefixSize))
-			fmtc.Printfn("{#65}%s{!}", strings.TrimRight(m, " •"))
-			m = ""
+			fmtc.Println(buf.String())
+			buf.Reset()
+			lineLen = 0
 		}
 
-		m += ff + " • "
+		if lineLen > 0 {
+			buf.WriteString(" {s-}•{!} ")
+			lineLen += 3
+		}
+
+		fmt.Fprintf(
+			buf, "{#243}%s{!}{s-}:{!}"+typeColors[f.Type]+"%s{!}",
+			f.Name, f.Value,
+		)
+
+		lineLen += f.Size()
 	}
 
-	fmtc.Print(markerColors[level] + "▎{!}" + strings.Repeat(" ", prefixSize))
-	fmtc.Printfn("{#65}%s{!}", strings.TrimRight(m, " •"))
+	if buf.Len() != 0 {
+		fmtc.Print(markerColors[level] + "▎{!}" + strings.Repeat(" ", prefixSize))
+		fmtc.Println(buf.String())
+	}
 }
 
 // hasStdinData return true if there is some data in stdin
@@ -378,6 +412,17 @@ func hasStdinData() bool {
 	}
 
 	return true
+}
+
+// ////////////////////////////////////////////////////////////////////////////////// //
+
+// Size returns visual size of the field
+func (f Field) Size() int {
+	if f.Type == TYPE_STRING {
+		return len(f.Name) + len(f.Value) + 3
+	}
+
+	return len(f.Name) + len(f.Value) + 1
 }
 
 // ////////////////////////////////////////////////////////////////////////////////// //
