@@ -50,6 +50,7 @@ const (
 	OPT_PAGER    = "P:pager"
 	OPT_FOLLOW   = "F:follow"
 	OPT_STRICT   = "S:strict"
+	OPT_FIND     = "f:find"
 	OPT_NO_COLOR = "nc:no-color"
 	OPT_HELP     = "h:help"
 	OPT_VER      = "v:version"
@@ -85,6 +86,7 @@ var optMap = options.Map{
 	OPT_FOLLOW:   {Type: options.BOOL},
 	OPT_PAGER:    {Type: options.BOOL},
 	OPT_STRICT:   {Type: options.BOOL},
+	OPT_FIND:     {Mergeble: true},
 	OPT_NO_COLOR: {Type: options.BOOL},
 	OPT_HELP:     {Type: options.BOOL},
 	OPT_VER:      {Type: options.MIXED},
@@ -135,6 +137,9 @@ var labels = map[string]string{
 
 // strictMode strict mode flag
 var strictMode bool
+
+// highlights is slice with texts to highlight
+var highlights Highlights
 
 // ////////////////////////////////////////////////////////////////////////////////// //
 
@@ -200,6 +205,8 @@ func preConfigureUI() {
 	fmtutil.SeparatorColorTag = "{s-}"
 	fmtutil.SeparatorTitleColorTag = "{s-}"
 	fmtutil.SeparatorTitleAlign = "c"
+
+	options.MergeSymbol = "\n"
 }
 
 // configureUI configures user interface
@@ -218,6 +225,10 @@ func process(args options.Arguments) error {
 	}
 
 	strictMode = options.GetB(OPT_STRICT)
+
+	if options.Has(OPT_FIND) {
+		highlights = Highlights(strings.Split(options.GetS(OPT_FIND), "\n"))
+	}
 
 	if options.GetB(OPT_FOLLOW) {
 		readDataStream(source, parseFilters(filters))
@@ -350,8 +361,19 @@ func renderLine(line string, filters Filters) bool {
 	}
 
 	recDate := time.UnixMicro(int64(ts * 1_000_000))
+	markerColor := markerColors[level]
 
-	fmtc.Print(markerColors[level] + "▎{!}")
+	if len(highlights) > 0 {
+		var found bool
+
+		msg, found = highlights.Apply(msg)
+
+		if found {
+			markerColor = "{#112}"
+		}
+	}
+
+	fmtc.Print(markerColor + "▎{!}")
 
 	fmtc.Printf(
 		"{s-}[ {s}%s{s-}.%s ]{!} ",
@@ -485,6 +507,7 @@ func genUsage() *usage.Info {
 	info.AddOption(OPT_FOLLOW, "Read log stream")
 	info.AddOption(OPT_PAGER, "Paginate output")
 	info.AddOption(OPT_STRICT, "Don't print non-JSON data")
+	info.AddOption(OPT_FIND, "Find and highlight part of message {s}(repeatable){!}")
 	info.AddOption(OPT_NO_COLOR, "Disable colors in output")
 	info.AddOption(OPT_HELP, "Show this help message")
 	info.AddOption(OPT_VER, "Show version")
@@ -510,8 +533,8 @@ func genUsage() *usage.Info {
 	)
 
 	info.AddRawExample(
-		"kubectl logs -f mypod | lj -F",
-		"Read log from k8s pod",
+		"kubectl logs -f mypod | lj -F -f update -f insert",
+		"Read log from k8s pod and highlight lines with \"update\" and \"insert\"",
 	)
 
 	info.AddRawExample(
