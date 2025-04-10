@@ -9,6 +9,7 @@ package cli
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 	"strings"
@@ -38,7 +39,7 @@ import (
 // Basic utility info
 const (
 	APP  = "lj"
-	VER  = "0.1.3"
+	VER  = "0.2.0"
 	DESC = "Tool for viewing JSON logs"
 )
 
@@ -48,6 +49,8 @@ const (
 const (
 	OPT_PAGER    = "P:pager"
 	OPT_FOLLOW   = "F:follow"
+	OPT_STRICT   = "S:strict"
+	OPT_FIND     = "f:find"
 	OPT_NO_COLOR = "nc:no-color"
 	OPT_HELP     = "h:help"
 	OPT_VER      = "v:version"
@@ -59,10 +62,21 @@ const (
 
 // ////////////////////////////////////////////////////////////////////////////////// //
 
+const (
+	TYPE_UNKNOWN uint8 = iota
+	TYPE_STRING
+	TYPE_NUMBER
+	TYPE_BOOL
+	TYPE_NIL
+)
+
+// ////////////////////////////////////////////////////////////////////////////////// //
+
 // Field is JSON field
 type Field struct {
 	Name  string
 	Value string
+	Type  uint8
 }
 
 // ////////////////////////////////////////////////////////////////////////////////// //
@@ -71,6 +85,8 @@ type Field struct {
 var optMap = options.Map{
 	OPT_FOLLOW:   {Type: options.BOOL},
 	OPT_PAGER:    {Type: options.BOOL},
+	OPT_STRICT:   {Type: options.BOOL},
+	OPT_FIND:     {Mergeble: true},
 	OPT_NO_COLOR: {Type: options.BOOL},
 	OPT_HELP:     {Type: options.BOOL},
 	OPT_VER:      {Type: options.MIXED},
@@ -103,12 +119,27 @@ var markerColors = map[string]string{
 	"fatal": "{#196}",
 }
 
+// typeColors is a maps with field types colors
+var typeColors = map[uint8]string{
+	TYPE_UNKNOWN: "",
+	TYPE_STRING:  "{#65}",
+	TYPE_NUMBER:  "{*}{#109}",
+	TYPE_NIL:     "{*}{s}",
+	TYPE_BOOL:    "{#74}",
+}
+
 // labels is a map with level labels
 var labels = map[string]string{
 	"warn":  "WARN",
 	"error": "ERR",
 	"fatal": "CRIT",
 }
+
+// strictMode strict mode flag
+var strictMode bool
+
+// highlights is slice with texts to highlight
+var highlights Highlights
 
 // ////////////////////////////////////////////////////////////////////////////////// //
 
@@ -174,6 +205,8 @@ func preConfigureUI() {
 	fmtutil.SeparatorColorTag = "{s-}"
 	fmtutil.SeparatorTitleColorTag = "{s-}"
 	fmtutil.SeparatorTitleAlign = "c"
+
+	options.MergeSymbol = "\n"
 }
 
 // configureUI configures user interface
@@ -189,6 +222,12 @@ func process(args options.Arguments) error {
 
 	if err != nil {
 		return err
+	}
+
+	strictMode = options.GetB(OPT_STRICT)
+
+	if options.Has(OPT_FIND) {
+		highlights = Highlights(strings.Split(options.GetS(OPT_FIND), "\n"))
 	}
 
 	if options.GetB(OPT_FOLLOW) {
@@ -273,6 +312,16 @@ func renderLine(line string, filters Filters) bool {
 
 	json := gjson.Parse(line)
 
+	if !json.IsObject() {
+		if strictMode {
+			return false
+		}
+
+		fmtc.Printfn("{#169}▎{!}{s-}%s{!}", line)
+
+		return true
+	}
+
 	json.ForEach(func(k, v gjson.Result) bool {
 		key := k.String()
 
@@ -288,15 +337,15 @@ func renderLine(line string, filters Filters) bool {
 		default:
 			switch v.Type {
 			case gjson.String:
-				fields = append(fields, Field{key, fmt.Sprintf("\"%s\"", v.Value())})
+				fields = append(fields, Field{key, fmt.Sprintf("\"%s\"", v.Value()), TYPE_STRING})
 			case gjson.False, gjson.True:
-				fields = append(fields, Field{key, fmt.Sprintf("%t", v.Bool())})
+				fields = append(fields, Field{key, fmt.Sprintf("%t", v.Bool()), TYPE_BOOL})
 			case gjson.Null:
-				fields = append(fields, Field{key, "nil"})
+				fields = append(fields, Field{key, "nil", TYPE_NIL})
 			case gjson.Number:
-				fields = append(fields, Field{key, v.String()})
+				fields = append(fields, Field{key, v.String(), TYPE_NUMBER})
 			default:
-				fields = append(fields, Field{key, fmt.Sprintf("%v", v.Value())})
+				fields = append(fields, Field{key, fmt.Sprintf("%v", v.Value()), TYPE_UNKNOWN})
 			}
 		}
 
@@ -312,8 +361,19 @@ func renderLine(line string, filters Filters) bool {
 	}
 
 	recDate := time.UnixMicro(int64(ts * 1_000_000))
+	markerColor := markerColors[level]
 
-	fmtc.Print(markerColors[level] + "▎{!}")
+	if len(highlights) > 0 {
+		var found bool
+
+		msg, found = highlights.Apply(msg)
+
+		if found {
+			markerColor = "{#112}"
+		}
+	}
+
+	fmtc.Print(markerColor + "▎{!}")
 
 	fmtc.Printf(
 		"{s-}[ {s}%s{s-}.%s ]{!} ",
@@ -327,7 +387,7 @@ func renderLine(line string, filters Filters) bool {
 	}
 
 	if caller != "" {
-		fmtc.Printf("{s-}(%s){!} ", caller)
+		fmtc.Printf("{s-}({&}%s{!&}){!} ", caller)
 	}
 
 	fmtc.Printf(textColors[level]+"%s{!}\n", msg)
@@ -347,22 +407,35 @@ func renderLine(line string, filters Filters) bool {
 
 // renderFields renders log fields
 func renderFields(level string, prefixSize int, fields []Field) {
-	var m string
+	var lineLen int
+
+	buf := &bytes.Buffer{}
 
 	for _, f := range fields {
-		ff := f.Name + ":" + f.Value
-
-		if len(m)+len(ff) > 88 {
+		if lineLen > 0 && lineLen+f.Size() > 88 {
 			fmtc.Print(markerColors[level] + "▎{!}" + strings.Repeat(" ", prefixSize))
-			fmtc.Printfn("{#65}%s{!}", strings.TrimRight(m, " •"))
-			m = ""
+			fmtc.Println(buf.String())
+			buf.Reset()
+			lineLen = 0
 		}
 
-		m += ff + " • "
+		if lineLen > 0 {
+			buf.WriteString(" {s-}•{!} ")
+			lineLen += 3
+		}
+
+		fmt.Fprintf(
+			buf, "{#243}%s{!}{s-}:{!}"+typeColors[f.Type]+"%s{!}",
+			f.Name, f.Value,
+		)
+
+		lineLen += f.Size()
 	}
 
-	fmtc.Print(markerColors[level] + "▎{!}" + strings.Repeat(" ", prefixSize))
-	fmtc.Printfn("{#65}%s{!}", strings.TrimRight(m, " •"))
+	if buf.Len() != 0 {
+		fmtc.Print(markerColors[level] + "▎{!}" + strings.Repeat(" ", prefixSize))
+		fmtc.Println(buf.String())
+	}
 }
 
 // hasStdinData return true if there is some data in stdin
@@ -378,6 +451,17 @@ func hasStdinData() bool {
 	}
 
 	return true
+}
+
+// ////////////////////////////////////////////////////////////////////////////////// //
+
+// Size returns visual size of the field
+func (f Field) Size() int {
+	if f.Type == TYPE_STRING {
+		return len(f.Name) + len(f.Value) + 3
+	}
+
+	return len(f.Name) + len(f.Value) + 1
 }
 
 // ////////////////////////////////////////////////////////////////////////////////// //
@@ -422,6 +506,8 @@ func genUsage() *usage.Info {
 
 	info.AddOption(OPT_FOLLOW, "Read log stream")
 	info.AddOption(OPT_PAGER, "Paginate output")
+	info.AddOption(OPT_STRICT, "Don't print non-JSON data")
+	info.AddOption(OPT_FIND, "Find and highlight part of message {s}(repeatable){!}")
 	info.AddOption(OPT_NO_COLOR, "Disable colors in output")
 	info.AddOption(OPT_HELP, "Show this help message")
 	info.AddOption(OPT_VER, "Show version")
@@ -447,8 +533,8 @@ func genUsage() *usage.Info {
 	)
 
 	info.AddRawExample(
-		"kubectl logs -f mypod | lj -F",
-		"Read log from k8s pod",
+		"kubectl logs -f mypod | lj -F -f update -f insert",
+		"Read log from k8s pod and highlight lines with \"update\" and \"insert\"",
 	)
 
 	info.AddRawExample(

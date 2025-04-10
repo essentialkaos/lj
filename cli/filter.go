@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/essentialkaos/ek/v13/fmtc"
 	"github.com/tidwall/gjson"
 )
 
@@ -35,6 +36,9 @@ type Filter struct {
 
 // Filters is a slice of filters
 type Filters []Filter
+
+// Highlights is a slice of highlights
+type Highlights []string
 
 // ////////////////////////////////////////////////////////////////////////////////// //
 
@@ -126,4 +130,18 @@ func (f Filters) IsMatch(fields map[string]gjson.Result) bool {
 	}
 
 	return true
+}
+
+// Apply applies highlights to given message
+func (h Highlights) Apply(msg string) (string, bool) {
+	var found bool
+
+	for _, hh := range h {
+		if strings.Contains(msg, hh) {
+			msg = strings.ReplaceAll(msg, hh, fmtc.Sprint("{#112}{_}"+hh+"{!}"))
+			found = true
+		}
+	}
+
+	return msg, found
 }
