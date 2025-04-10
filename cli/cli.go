@@ -121,9 +121,9 @@ var markerColors = map[string]string{
 
 // labels is a map with level labels
 var labels = map[string]string{
-	"warn":  "[WARN]",
-	"error": "[ERR]",
-	"fatal": "[CRIT]",
+	"warn":  "WARN",
+	"error": "ERR",
+	"fatal": "CRIT",
 }
 
 // typeColors is a maps with field types colors
@@ -317,7 +317,8 @@ func renderLine(line string, filters Filters) bool {
 			return false
 		}
 
-		fmtc.Printfn("{#169}▎{!}{s-}%s{!}", line)
+		fmtc.If(!fmtc.DisableColors).Print("{#169}▎{!}")
+		fmtc.Printfn("{s-}%s{!}", line)
 
 		return true
 	}
@@ -373,7 +374,7 @@ func renderLine(line string, filters Filters) bool {
 		}
 	}
 
-	fmtc.Print(markerColor + "▎{!}")
+	fmtc.If(!fmtc.DisableColors).Print(markerColor + "▎{!}")
 
 	fmtc.Printf(
 		"{s-}[ {s}%s{s-}.%s ]{!} ",
@@ -383,7 +384,8 @@ func renderLine(line string, filters Filters) bool {
 
 	switch level {
 	case "warn", "error", "fatal":
-		fmtc.Printf(textColors[level]+"{@}{*} %s {!} ", labels[level])
+		fmtc.If(!fmtc.DisableColors).Printf(textColors[level]+"{@}{*} %s {!} ", labels[level])
+		fmtc.If(fmtc.DisableColors).Printf("[%s] ", labels[level])
 	}
 
 	if caller != "" {
@@ -413,7 +415,8 @@ func renderFields(level string, prefixSize int, fields []Field) {
 
 	for _, f := range fields {
 		if lineLen > 0 && lineLen+f.Size() > 88 {
-			fmtc.Print(markerColors[level] + "▎{!}" + strings.Repeat(" ", prefixSize))
+			fmtc.If(!fmtc.DisableColors).Print(markerColors[level] + "▎{!}")
+			fmt.Print(strings.Repeat(" ", prefixSize))
 			fmtc.Println(buf.String())
 			buf.Reset()
 			lineLen = 0
@@ -433,7 +436,8 @@ func renderFields(level string, prefixSize int, fields []Field) {
 	}
 
 	if buf.Len() != 0 {
-		fmtc.Print(markerColors[level] + "▎{!}" + strings.Repeat(" ", prefixSize))
+		fmtc.If(!fmtc.DisableColors).Print(markerColors[level] + "▎{!}")
+		fmt.Print(strings.Repeat(" ", prefixSize))
 		fmtc.Println(buf.String())
 	}
 }
