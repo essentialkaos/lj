@@ -39,7 +39,7 @@ import (
 // Basic utility info
 const (
 	APP  = "lj"
-	VER  = "0.2.0"
+	VER  = "0.2.1"
 	DESC = "Tool for viewing JSON logs"
 )
 
@@ -47,11 +47,11 @@ const (
 
 // Options
 const (
-	OPT_PAGER    = "P:pager"
 	OPT_FOLLOW   = "F:follow"
 	OPT_STRICT   = "S:strict"
 	OPT_FIND     = "f:find"
-	OPT_NO_COLOR = "nc:no-color"
+	OPT_NO_PAGER = "NP:no-pager"
+	OPT_NO_COLOR = "NC:no-color"
 	OPT_HELP     = "h:help"
 	OPT_VER      = "v:version"
 
@@ -84,9 +84,9 @@ type Field struct {
 // optMap contains information about all supported options
 var optMap = options.Map{
 	OPT_FOLLOW:   {Type: options.BOOL},
-	OPT_PAGER:    {Type: options.BOOL},
 	OPT_STRICT:   {Type: options.BOOL},
 	OPT_FIND:     {Mergeble: true},
+	OPT_NO_PAGER: {Type: options.BOOL},
 	OPT_NO_COLOR: {Type: options.BOOL},
 	OPT_HELP:     {Type: options.BOOL},
 	OPT_VER:      {Type: options.MIXED},
@@ -119,6 +119,13 @@ var markerColors = map[string]string{
 	"fatal": "{#196}",
 }
 
+// labels is a map with level labels
+var labels = map[string]string{
+	"warn":  "WARN",
+	"error": "ERR",
+	"fatal": "CRIT",
+}
+
 // typeColors is a maps with field types colors
 var typeColors = map[uint8]string{
 	TYPE_UNKNOWN: "",
@@ -126,13 +133,6 @@ var typeColors = map[uint8]string{
 	TYPE_NUMBER:  "{*}{#109}",
 	TYPE_NIL:     "{*}{s}",
 	TYPE_BOOL:    "{#74}",
-}
-
-// labels is a map with level labels
-var labels = map[string]string{
-	"warn":  "WARN",
-	"error": "ERR",
-	"fatal": "CRIT",
 }
 
 // strictMode strict mode flag
@@ -259,7 +259,7 @@ func readData(source *os.File, filters Filters) {
 	r := bufio.NewReader(source)
 	s := bufio.NewScanner(r)
 
-	if options.GetB(OPT_PAGER) {
+	if !options.GetB(OPT_NO_PAGER) {
 		if pager.Setup() == nil {
 			defer pager.Complete()
 		}
@@ -505,9 +505,9 @@ func genUsage() *usage.Info {
 	info.AppNameColorTag = colorTagApp
 
 	info.AddOption(OPT_FOLLOW, "Read log stream")
-	info.AddOption(OPT_PAGER, "Paginate output")
 	info.AddOption(OPT_STRICT, "Don't print non-JSON data")
 	info.AddOption(OPT_FIND, "Find and highlight part of message {s}(repeatable){!}")
+	info.AddOption(OPT_NO_PAGER, "Disable pager")
 	info.AddOption(OPT_NO_COLOR, "Disable colors in output")
 	info.AddOption(OPT_HELP, "Show this help message")
 	info.AddOption(OPT_VER, "Show version")
