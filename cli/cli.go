@@ -121,9 +121,9 @@ var markerColors = map[string]string{
 
 // labels is a map with level labels
 var labels = map[string]string{
-	"warn":  "WARN",
-	"error": "ERR",
-	"fatal": "CRIT",
+	"warn":  "[WARN]",
+	"error": "[ERR]",
+	"fatal": "[CRIT]",
 }
 
 // typeColors is a maps with field types colors
