@@ -523,8 +523,8 @@ func genUsage() *usage.Info {
 	)
 
 	info.AddRawExample(
-		"lj -P log.json",
-		"Read log file with pager",
+		"lj -NP log.json",
+		"Read log file with disabled pager",
 	)
 
 	info.AddRawExample(
@@ -533,8 +533,8 @@ func genUsage() *usage.Info {
 	)
 
 	info.AddRawExample(
-		"kubectl logs -f mypod | lj -F -f update -f insert",
-		"Read log from k8s pod and highlight lines with \"update\" and \"insert\"",
+		"kubectl logs -f mypod | lj -F -f update -f 'delete user'",
+		"Read log from k8s pod and highlight phrases \"update\" and \"delete user\"",
 	)
 
 	info.AddRawExample(

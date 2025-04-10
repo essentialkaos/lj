@@ -65,10 +65,10 @@
   <text x="12" y="240">  <tspan class="s">•</tspan> <tspan class="c">field</tspan><tspan class="s">:</tspan><tspan class="y">&lt;</tspan><tspan class="b">value</tspan> <tspan class="s">—</tspan> equal or less</text>
   <text x="12" y="280"><tspan class="BB">Options</tspan></text>
   <text x="12" y="320">  <tspan class="g">--follow</tspan><tspan class="s">, </tspan><tspan class="g">-F</tspan> <tspan class="d">.....</tspan> Read log stream</text>
-  <text x="12" y="340">  <tspan class="g">--pager</tspan><tspan class="s">, </tspan><tspan class="g">-P</tspan> <tspan class="d">......</tspan> Paginate output</text>
-  <text x="12" y="360">  <tspan class="g">--strict</tspan><tspan class="s">, </tspan><tspan class="g">-S</tspan> <tspan class="d">.....</tspan> Don&#39;t print non-JSON data</text>
-  <text x="12" y="380">  <tspan class="g">--find</tspan><tspan class="s">, </tspan><tspan class="g">-f</tspan> <tspan class="d">.......</tspan> Find and highlight part of message <tspan class="s">(mergeble)</tspan></text>
-  <text x="12" y="400">  <tspan class="g">--no-color</tspan><tspan class="s">, </tspan><tspan class="g">-nc</tspan> <tspan class="d">..</tspan> Disable colors in output</text>
+  <text x="12" y="340">  <tspan class="g">--strict</tspan><tspan class="s">, </tspan><tspan class="g">-S</tspan> <tspan class="d">.....</tspan> Don&#39;t print non-JSON data</text>
+  <text x="12" y="360">  <tspan class="g">--find</tspan><tspan class="s">, </tspan><tspan class="g">-f</tspan> <tspan class="d">.......</tspan> Find and highlight part of message <tspan class="s">(repeatable)</tspan></text>
+  <text x="12" y="380">  <tspan class="g">--no-pager</tspan><tspan class="s">, </tspan><tspan class="g">-NP</tspan> <tspan class="d">..</tspan> Disable pager</text>
+  <text x="12" y="400">  <tspan class="g">--no-color</tspan><tspan class="s">, </tspan><tspan class="g">-NC</tspan> <tspan class="d">..</tspan> Disable colors in output</text>
   <text x="12" y="420">  <tspan class="g">--help</tspan><tspan class="s">, </tspan><tspan class="g">-h</tspan> <tspan class="d">.......</tspan> Show this help message</text>
   <text x="12" y="440">  <tspan class="g">--version</tspan><tspan class="s">, </tspan><tspan class="g">-v</tspan> <tspan class="d">....</tspan> Show version</text>
   <text x="12" y="480"><tspan class="BB">Examples</tspan></text>
@@ -76,12 +76,12 @@
   <text x="12" y="540">  <tspan class="II d">Read log file</tspan></text>
   <text x="12" y="580">  lj &lt; log.json</text>
   <text x="12" y="600">  <tspan class="II d">Read log file with redirect</tspan></text>
-  <text x="12" y="640">  lj -P log.json</text>
-  <text x="12" y="660">  <tspan class="II d">Read log file with pager</tspan></text>
+  <text x="12" y="640">  lj -NP log.json</text>
+  <text x="12" y="660">  <tspan class="II d">Read log file with disabled pager</tspan></text>
   <text x="12" y="700">  tail -100 log.json | lj </text>
   <text x="12" y="720">  <tspan class="II d">Read log file from the tail and filter data</tspan></text>
-  <text x="12" y="760">  kubectl logs -f mypod | lj -F -f update -f insert</text>
-  <text x="12" y="780">  <tspan class="II d">Read log from k8s pod and highlight lines with &#34;update&#34; and &#34;insert&#34;</tspan></text>
+  <text x="12" y="760">  kubectl logs -f mypod | lj -F -f update -f &#39;delete user&#39;</text>
+  <text x="12" y="780">  <tspan class="II d">Read log from k8s pod and highlight phrases &#34;update&#34; and &#34;delete user&#34;</tspan></text>
   <text x="12" y="820">  lj log.json level:warn &#39;caller:~app/db.go&#39; &#39;proc-time:&gt;15&#39;</text>
   <text x="12" y="840">  <tspan class="II d">Read log file and filter records</tspan></text>
 
