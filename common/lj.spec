@@ -6,7 +6,7 @@
 
 Summary:        Tool for viewing JSON logs
 Name:           lj
-Version:        0.2.0
+Version:        0.2.1
 Release:        0%{?dist}
 Group:          Applications/System
 License:        Apache License, Version 2.0
@@ -97,6 +97,11 @@ fi
 ################################################################################
 
 %changelog
+* Fri Apr 11 2025 Anton Novojilov <andy@essentialkaos.com> - 0.2.1-0
+- Use pager by default
+- Improved formatting in no color mode
+- Improved usage info
+
 * Thu Apr 10 2025 Anton Novojilov <andy@essentialkaos.com> - 0.2.0-0
 - Added -f/--find option to highlight words in message text
 - Printing non-JSON encoded data (can be disabled by option -S/--strict)
