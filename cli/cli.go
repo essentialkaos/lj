@@ -39,7 +39,7 @@ import (
 // Basic utility info
 const (
 	APP  = "lj"
-	VER  = "0.2.1"
+	VER  = "0.3.0"
 	DESC = "Tool for viewing JSON logs"
 )
 
@@ -55,6 +55,7 @@ const (
 	OPT_HELP     = "h:help"
 	OPT_VER      = "v:version"
 
+	OPT_UPDATE       = "U:update"
 	OPT_VERB_VER     = "vv:verbose-version"
 	OPT_COMPLETION   = "completion"
 	OPT_GENERATE_MAN = "generate-man"
@@ -91,6 +92,7 @@ var optMap = options.Map{
 	OPT_HELP:     {Type: options.BOOL},
 	OPT_VER:      {Type: options.MIXED},
 
+	OPT_UPDATE:       {Type: options.MIXED},
 	OPT_VERB_VER:     {Type: options.BOOL},
 	OPT_COMPLETION:   {},
 	OPT_GENERATE_MAN: {Type: options.BOOL},
@@ -146,12 +148,13 @@ var highlights Highlights
 // Run is main utility function
 func Run(gitRev string, gomod []byte) {
 	preConfigureUI()
+	preConfigureOptions()
 
 	args, errs := options.Parse(optMap)
 
 	if !errs.IsEmpty() {
 		terminal.Error("Options parsing errors:")
-		terminal.Error(errs.Error("- "))
+		terminal.Error(errs.Error(" - "))
 		os.Exit(1)
 	}
 
@@ -172,6 +175,8 @@ func Run(gitRev string, gomod []byte) {
 			WithDeps(deps.Extract(gomod)).
 			Print()
 		os.Exit(0)
+	case withSelfUpdate && options.GetB(OPT_UPDATE):
+		os.Exit(updateBinary())
 	case options.GetB(OPT_HELP) || (!hasStdinData() && len(args) == 0):
 		genUsage().Print()
 		os.Exit(0)
@@ -207,6 +212,11 @@ func preConfigureUI() {
 	fmtutil.SeparatorTitleAlign = "c"
 
 	options.MergeSymbol = "\n"
+}
+
+// preConfigureOptions preconfigures command-line options based on build tags
+func preConfigureOptions() {
+	optMap.SetIf(withSelfUpdate, OPT_UPDATE, &options.V{Type: options.MIXED})
 }
 
 // configureUI configures user interface
@@ -513,6 +523,11 @@ func genUsage() *usage.Info {
 	info.AddOption(OPT_FIND, "Find and highlight part of message {s}(repeatable){!}")
 	info.AddOption(OPT_NO_PAGER, "Disable pager")
 	info.AddOption(OPT_NO_COLOR, "Disable colors in output")
+
+	if withSelfUpdate {
+		info.AddOption(OPT_UPDATE, "Update application to the latest version")
+	}
+
 	info.AddOption(OPT_HELP, "Show this help message")
 	info.AddOption(OPT_VER, "Show version")
 
