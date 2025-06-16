@@ -77,7 +77,7 @@ func parseFilter(f string) Filter {
 	}
 
 	if filter.Cond == COND_GREATER || filter.Cond == COND_LESS {
-		fv, _ := strconv.ParseFloat(value, 10)
+		fv, _ := strconv.ParseFloat(value, 64)
 		filter.Value = fv
 	} else {
 		filter.Value = value
