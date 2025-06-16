@@ -1,6 +1,6 @@
 module github.com/essentialkaos/lj
 
-go 1.23.7
+go 1.23.8
 
 require (
 	github.com/essentialkaos/ek/v13 v13.30.0
