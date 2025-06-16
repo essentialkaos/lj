@@ -295,7 +295,7 @@ func readDataStream(source *os.File, filters Filters) {
 		line = strings.TrimRight(line, "\r\n")
 
 		if time.Since(lastPrint) > 30*time.Second {
-			fmtutil.Separator(true, timeutil.ShortDuration(time.Since(lastPrint), false))
+			fmtutil.Separator(true, timeutil.Pretty(time.Since(lastPrint)).Short(true))
 		}
 
 		if renderLine(line, filters) {
