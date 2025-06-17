@@ -6,7 +6,7 @@
 
 Summary:        Tool for viewing JSON logs
 Name:           lj
-Version:        0.2.1
+Version:        0.3.0
 Release:        0%{?dist}
 Group:          Applications/System
 License:        Apache License, Version 2.0
@@ -97,6 +97,11 @@ fi
 ################################################################################
 
 %changelog
+* Tue Jun 17 2025 Anton Novojilov <andy@essentialkaos.com> - 0.3.0-0
+- Fixed bug with parsing float numbers for filters
+- Code refactoring
+- Dependencies update
+
 * Fri Apr 11 2025 Anton Novojilov <andy@essentialkaos.com> - 0.2.1-0
 - Use pager by default
 - Improved formatting in no color mode
