@@ -6,7 +6,7 @@
   <a href="#license"><img src=".github/images/license.svg"/></a>
 </p>
 
-<p align="center"><a href="#installation">Installation</a> • <a href="#command-line-completion">Command-line completion</a> • <a href="#man-documentation">Man documentation</a> • <a href="#usage">Usage</a> • <a href="#ci-status">CI Status</a> • <a href="#contributing">Contributing</a> • <a href="#license">License</a></p>
+<p align="center"><a href="#installation">Installation</a> • <a href="#upgrading">Upgrading</a> • <a href="#usage">Usage</a> • <a href="#ci-status">CI Status</a> • <a href="#license">License</a></p>
 
 <br/>
 
@@ -33,6 +33,23 @@ You can download prebuilt binaries for Linux and macOS from [EK Apps Repository]
 ```bash
 bash <(curl -fsSL https://apps.kaos.st/get) lj
 ```
+
+### Upgrading
+
+Since version `0.3.0` you can update `lj` to the latest release using [self-update feature](https://github.com/essentialkaos/.github/blob/master/APPS-UPDATE.md):
+
+```bash
+lj --update
+```
+
+This command will runs a self-update in interactive mode. If you want to run a quiet update (_no output_), use the following command:
+
+```bash
+lj --update=quiet
+```
+
+> [!NOTE]  
+> Please note that the self-update feature only works with binaries that are downloaded from the [EK Apps Repository](https://apps.kaos.st/lj/latest). Binaries from packages do not have a self-update feature and must be upgraded via the package manager.
 
 ### Command-line completion
 
