@@ -1,9 +1,9 @@
 module github.com/essentialkaos/lj
 
-go 1.23.8
+go 1.23.10
 
 require (
-	github.com/essentialkaos/ek/v13 v13.31.3
+	github.com/essentialkaos/ek/v13 v13.32.0
 	github.com/tidwall/gjson v1.18.0
 )
 
