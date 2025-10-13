@@ -1,15 +1,15 @@
 module github.com/essentialkaos/lj
 
-go 1.23.8
+go 1.24.0
 
 require (
-	github.com/essentialkaos/ek/v13 v13.30.1
+	github.com/essentialkaos/ek/v13 v13.35.3
 	github.com/tidwall/gjson v1.18.0
 )
 
 require (
 	github.com/essentialkaos/depsy v1.3.1 // indirect
-	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/match v1.2.0 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
-	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
 )

@@ -39,7 +39,7 @@ import (
 // Basic utility info
 const (
 	APP  = "lj"
-	VER  = "0.3.0"
+	VER  = "0.3.1"
 	DESC = "Tool for viewing JSON logs"
 )
 
@@ -92,7 +92,6 @@ var optMap = options.Map{
 	OPT_HELP:     {Type: options.BOOL},
 	OPT_VER:      {Type: options.MIXED},
 
-	OPT_UPDATE:       {Type: options.MIXED},
 	OPT_VERB_VER:     {Type: options.BOOL},
 	OPT_COMPLETION:   {},
 	OPT_GENERATE_MAN: {Type: options.BOOL},
@@ -438,7 +437,7 @@ func renderFields(level string, prefixSize int, fields []Field) {
 		}
 
 		fmt.Fprintf(
-			buf, "{#243}%s{!}{s-}:{!}"+typeColors[f.Type]+"%s{!}",
+			buf, "{#243}{&}%s{!}{s-}:{!}"+typeColors[f.Type]+"%s{!}",
 			f.Name, f.Value,
 		)
 

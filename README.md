@@ -57,17 +57,17 @@ You can generate completion for `bash`, `zsh` or `fish` shell.
 
 Bash:
 ```bash
-sudo lj --completion=bash 1> /etc/bash_completion.d/lj
+lj --completion=bash | sudo tee /etc/bash_completion.d/lj > /dev/null
 ```
 
 ZSH:
 ```bash
-sudo lj --completion=zsh 1> /usr/share/zsh/site-functions/lj
+lj --completion=zsh | sudo tee /usr/share/zsh/site-functions/lj > /dev/null
 ```
 
 Fish:
 ```bash
-sudo lj --completion=fish 1> /usr/share/fish/vendor_completions.d/lj.fish
+lj --completion=fish | sudo tee /usr/share/fish/vendor_completions.d/lj.fish > /dev/null
 ```
 
 ### Man documentation

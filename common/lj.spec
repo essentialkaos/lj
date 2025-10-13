@@ -6,7 +6,7 @@
 
 Summary:        Tool for viewing JSON logs
 Name:           lj
-Version:        0.3.0
+Version:        0.3.1
 Release:        0%{?dist}
 Group:          Applications/System
 License:        Apache License, Version 2.0
@@ -16,7 +16,7 @@ Source0:        https://source.kaos.st/%{name}/%{name}-%{version}.tar.bz2
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-BuildRequires:  golang >= 1.23
+BuildRequires:  golang >= 1.24
 
 Provides:       %{name} = %{version}-%{release}
 
@@ -97,6 +97,10 @@ fi
 ################################################################################
 
 %changelog
+* Mon Oct 13 2025 Anton Novojilov <andy@essentialkaos.com> - 0.3.1-0
+- Use italic text for field name
+- Dependencies update
+
 * Tue Jun 17 2025 Anton Novojilov <andy@essentialkaos.com> - 0.3.0-0
 - Fixed bug with parsing float numbers for filters
 - Code refactoring
