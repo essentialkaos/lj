@@ -39,7 +39,7 @@ import (
 // Basic utility info
 const (
 	APP  = "lj"
-	VER  = "0.3.0"
+	VER  = "0.3.1"
 	DESC = "Tool for viewing JSON logs"
 )
 
@@ -437,7 +437,7 @@ func renderFields(level string, prefixSize int, fields []Field) {
 		}
 
 		fmt.Fprintf(
-			buf, "{#243}%s{!}{s-}:{!}"+typeColors[f.Type]+"%s{!}",
+			buf, "{#243}{&}%s{!}{s-}:{!}"+typeColors[f.Type]+"%s{!}",
 			f.Name, f.Value,
 		)
 
