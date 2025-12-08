@@ -6,7 +6,7 @@
 
 Summary:        Tool for viewing JSON logs
 Name:           lj
-Version:        0.3.1
+Version:        0.4.0
 Release:        0%{?dist}
 Group:          Applications/System
 License:        Apache License, Version 2.0
@@ -97,6 +97,10 @@ fi
 ################################################################################
 
 %changelog
+* Mon Dec 08 2025 Anton Novojilov <andy@essentialkaos.com> - 0.4.0-0
+- Added support of 'time' field for date/time
+- Added option -t/--time for date/time layout customization
+
 * Mon Oct 13 2025 Anton Novojilov <andy@essentialkaos.com> - 0.3.1-0
 - Use italic text for field name
 - Dependencies update
