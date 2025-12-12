@@ -100,6 +100,7 @@ fi
 * Mon Dec 08 2025 Anton Novojilov <andy@essentialkaos.com> - 0.4.0-0
 - Added support of 'time' field for date/time
 - Added option -t/--time for date/time layout customization
+- Improved rendering of messages with newlines and tabs
 
 * Mon Oct 13 2025 Anton Novojilov <andy@essentialkaos.com> - 0.3.1-0
 - Use italic text for field name

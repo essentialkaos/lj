@@ -15,10 +15,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/essentialkaos/ek/v13/ansi"
 	"github.com/essentialkaos/ek/v13/fmtc"
 	"github.com/essentialkaos/ek/v13/fmtutil"
+	"github.com/essentialkaos/ek/v13/mathutil"
 	"github.com/essentialkaos/ek/v13/options"
 	"github.com/essentialkaos/ek/v13/pager"
+	"github.com/essentialkaos/ek/v13/strutil"
 	"github.com/essentialkaos/ek/v13/support"
 	"github.com/essentialkaos/ek/v13/support/deps"
 	"github.com/essentialkaos/ek/v13/terminal"
@@ -147,6 +150,15 @@ var highlights Highlights
 // timeLayout is time layout for parsing time
 var timeLayout string
 
+// lastSizeCheck is last check of terminal size
+var lastSizeCheck time.Time
+
+// terminalWidth is width of terminal
+var terminalWidth int
+
+// follow is a flag for follow mode
+var follow bool
+
 // ////////////////////////////////////////////////////////////////////////////////// //
 
 // Run is main utility function
@@ -216,6 +228,9 @@ func preConfigureUI() {
 	fmtutil.SeparatorTitleAlign = "c"
 
 	options.MergeSymbol = "\n"
+
+	lastSizeCheck = time.Now()
+	terminalWidth = tty.GetWidth()
 }
 
 // preConfigureOptions preconfigures command-line options based on build tags
@@ -228,6 +243,8 @@ func configureUI() {
 	if options.GetB(OPT_NO_COLOR) {
 		fmtc.DisableColors = true
 	}
+
+	follow = options.GetB(OPT_FOLLOW)
 }
 
 // process starts arguments processing
@@ -412,7 +429,10 @@ func renderLine(line string, filters Filters) bool {
 		fmtc.Printf("{s-}({&}%s{!&}){!} ", caller)
 	}
 
-	fmtc.Printf(textColors[level]+"%s{!}\n", msg)
+	fmtc.Printf(
+		textColors[level]+"%s{!}\n",
+		formatMessage(msg, level, labels[level], caller),
+	)
 
 	if len(fields) != 0 {
 		prefixSize := 26
@@ -475,6 +495,65 @@ func hasStdinData() bool {
 	}
 
 	return true
+}
+
+// formatMessage formats message text
+func formatMessage(msg, level, label, caller string) string {
+	if follow && time.Since(lastSizeCheck) > time.Second {
+		lastSizeCheck = time.Now()
+		terminalWidth = tty.GetWidth()
+	}
+
+	prefixSize := 26 +
+		mathutil.B(caller != "", len(caller)+3, 0) +
+		mathutil.B(label != "", len(label)+3, 0)
+
+	maxLineSize := terminalWidth - prefixSize - 1
+
+	if !strings.ContainsRune(msg, '\n') && strutil.Len(msg) < maxLineSize {
+		return msg
+	}
+
+	var msgBuf, wordBuf bytes.Buffer
+	var curSize int
+
+	for _, r := range msg {
+		switch r {
+		case '\n':
+			wordBuf.WriteString(fmtc.Render("{c}\\n{!}" + textColors[level]))
+
+		case '\t':
+			wordBuf.WriteString(fmtc.Render("{m}↦{!}" + textColors[level]))
+
+		case ' ':
+			if curSize+wordBuf.Len() > maxLineSize {
+				msgBuf.WriteRune('\n')
+
+				msgBuf.WriteString(fmtc.Render(
+					markerColors[level] + "▎{!}" +
+						strings.Repeat(" ", prefixSize) +
+						textColors[level],
+				))
+
+				curSize = len(ansi.RemoveCodes(wordBuf.String()))
+			}
+
+			curSize += len(ansi.RemoveCodes(wordBuf.String())) + 1
+			wordBuf.WriteTo(&msgBuf)
+			wordBuf.Reset()
+			msgBuf.WriteRune(' ')
+
+		default:
+			wordBuf.WriteRune(r)
+		}
+	}
+
+	if wordBuf.Len() > 0 {
+		wordBuf.WriteTo(&msgBuf)
+		wordBuf.Reset()
+	}
+
+	return msgBuf.String()
 }
 
 // getTimeLayout returns time layout for time.Parse
