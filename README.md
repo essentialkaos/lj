@@ -48,7 +48,7 @@ This command will runs a self-update in interactive mode. If you want to run a q
 lj --update=quiet
 ```
 
-> [!NOTE]  
+> [!NOTE]
 > Please note that the self-update feature only works with binaries that are downloaded from the [EK Apps Repository](https://apps.kaos.st/lj/latest). Binaries from packages do not have a self-update feature and must be upgraded via the package manager.
 
 ### Command-line completion

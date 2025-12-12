@@ -15,10 +15,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/essentialkaos/ek/v13/ansi"
 	"github.com/essentialkaos/ek/v13/fmtc"
 	"github.com/essentialkaos/ek/v13/fmtutil"
+	"github.com/essentialkaos/ek/v13/mathutil"
 	"github.com/essentialkaos/ek/v13/options"
 	"github.com/essentialkaos/ek/v13/pager"
+	"github.com/essentialkaos/ek/v13/strutil"
 	"github.com/essentialkaos/ek/v13/support"
 	"github.com/essentialkaos/ek/v13/support/deps"
 	"github.com/essentialkaos/ek/v13/terminal"
@@ -39,7 +42,7 @@ import (
 // Basic utility info
 const (
 	APP  = "lj"
-	VER  = "0.3.1"
+	VER  = "0.4.0"
 	DESC = "Tool for viewing JSON logs"
 )
 
@@ -47,13 +50,14 @@ const (
 
 // Options
 const (
-	OPT_FOLLOW   = "F:follow"
-	OPT_STRICT   = "S:strict"
-	OPT_FIND     = "f:find"
-	OPT_NO_PAGER = "NP:no-pager"
-	OPT_NO_COLOR = "NC:no-color"
-	OPT_HELP     = "h:help"
-	OPT_VER      = "v:version"
+	OPT_FOLLOW      = "F:follow"
+	OPT_STRICT      = "S:strict"
+	OPT_FIND        = "f:find"
+	OPT_TIME_LAYOUT = "t:time"
+	OPT_NO_PAGER    = "NP:no-pager"
+	OPT_NO_COLOR    = "NC:no-color"
+	OPT_HELP        = "h:help"
+	OPT_VER         = "v:version"
 
 	OPT_UPDATE       = "U:update"
 	OPT_VERB_VER     = "vv:verbose-version"
@@ -84,13 +88,14 @@ type Field struct {
 
 // optMap contains information about all supported options
 var optMap = options.Map{
-	OPT_FOLLOW:   {Type: options.BOOL},
-	OPT_STRICT:   {Type: options.BOOL},
-	OPT_FIND:     {Mergeble: true},
-	OPT_NO_PAGER: {Type: options.BOOL},
-	OPT_NO_COLOR: {Type: options.BOOL},
-	OPT_HELP:     {Type: options.BOOL},
-	OPT_VER:      {Type: options.MIXED},
+	OPT_FOLLOW:      {Type: options.BOOL},
+	OPT_STRICT:      {Type: options.BOOL},
+	OPT_FIND:        {Mergeble: true},
+	OPT_TIME_LAYOUT: {Value: "iso-8601"},
+	OPT_NO_PAGER:    {Type: options.BOOL},
+	OPT_NO_COLOR:    {Type: options.BOOL},
+	OPT_HELP:        {Type: options.BOOL},
+	OPT_VER:         {Type: options.MIXED},
 
 	OPT_VERB_VER:     {Type: options.BOOL},
 	OPT_COMPLETION:   {},
@@ -141,6 +146,18 @@ var strictMode bool
 
 // highlights is slice with texts to highlight
 var highlights Highlights
+
+// timeLayout is time layout for parsing time
+var timeLayout string
+
+// lastSizeCheck is last check of terminal size
+var lastSizeCheck time.Time
+
+// terminalWidth is width of terminal
+var terminalWidth int
+
+// follow is a flag for follow mode
+var follow bool
 
 // ////////////////////////////////////////////////////////////////////////////////// //
 
@@ -211,6 +228,9 @@ func preConfigureUI() {
 	fmtutil.SeparatorTitleAlign = "c"
 
 	options.MergeSymbol = "\n"
+
+	lastSizeCheck = time.Now()
+	terminalWidth = tty.GetWidth()
 }
 
 // preConfigureOptions preconfigures command-line options based on build tags
@@ -223,6 +243,8 @@ func configureUI() {
 	if options.GetB(OPT_NO_COLOR) {
 		fmtc.DisableColors = true
 	}
+
+	follow = options.GetB(OPT_FOLLOW)
 }
 
 // process starts arguments processing
@@ -234,6 +256,7 @@ func process(args options.Arguments) error {
 	}
 
 	strictMode = options.GetB(OPT_STRICT)
+	timeLayout = getTimeLayout(options.GetS(OPT_TIME_LAYOUT))
 
 	if options.Has(OPT_FIND) {
 		highlights = Highlights(strings.Split(options.GetS(OPT_FIND), "\n"))
@@ -344,6 +367,11 @@ func renderLine(line string, filters Filters) bool {
 			caller = v.String()
 		case "ts":
 			ts = v.Float()
+		case "time":
+			tt, err := time.Parse(timeLayout, v.String())
+			if err == nil {
+				ts = float64(tt.Unix())
+			}
 		default:
 			switch v.Type {
 			case gjson.String:
@@ -401,7 +429,10 @@ func renderLine(line string, filters Filters) bool {
 		fmtc.Printf("{s-}({&}%s{!&}){!} ", caller)
 	}
 
-	fmtc.Printf(textColors[level]+"%s{!}\n", msg)
+	fmtc.Printf(
+		textColors[level]+"%s{!}\n",
+		formatMessage(msg, level, labels[level], caller),
+	)
 
 	if len(fields) != 0 {
 		prefixSize := 26
@@ -466,6 +497,89 @@ func hasStdinData() bool {
 	return true
 }
 
+// formatMessage formats message text
+func formatMessage(msg, level, label, caller string) string {
+	if follow && time.Since(lastSizeCheck) > time.Second {
+		lastSizeCheck = time.Now()
+		terminalWidth = tty.GetWidth()
+	}
+
+	prefixSize := 26 +
+		mathutil.B(caller != "", len(caller)+3, 0) +
+		mathutil.B(label != "", len(label)+3, 0)
+
+	maxLineSize := terminalWidth - prefixSize - 1
+
+	if !strings.ContainsRune(msg, '\n') && strutil.Len(msg) < maxLineSize {
+		return msg
+	}
+
+	var msgBuf, wordBuf bytes.Buffer
+	var curSize int
+
+	for _, r := range msg {
+		switch r {
+		case '\n':
+			wordBuf.WriteString(fmtc.Render("{c}\\n{!}" + textColors[level]))
+
+		case '\t':
+			wordBuf.WriteString(fmtc.Render("{m}↦{!}" + textColors[level]))
+
+		case ' ':
+			if curSize+wordBuf.Len() > maxLineSize {
+				msgBuf.WriteRune('\n')
+
+				msgBuf.WriteString(fmtc.Render(
+					markerColors[level] + "▎{!}" +
+						strings.Repeat(" ", prefixSize) +
+						textColors[level],
+				))
+
+				curSize = len(ansi.RemoveCodes(wordBuf.String()))
+			}
+
+			curSize += len(ansi.RemoveCodes(wordBuf.String())) + 1
+			wordBuf.WriteTo(&msgBuf)
+			wordBuf.Reset()
+			msgBuf.WriteRune(' ')
+
+		default:
+			wordBuf.WriteRune(r)
+		}
+	}
+
+	if wordBuf.Len() > 0 {
+		wordBuf.WriteTo(&msgBuf)
+		wordBuf.Reset()
+	}
+
+	return msgBuf.String()
+}
+
+// getTimeLayout returns time layout for time.Parse
+func getTimeLayout(layout string) string {
+	switch strings.ToLower(layout) {
+	case "8601", "iso-8601", "iso8601":
+		return "2006-01-02T15:04:05Z"
+	case "822", "rfc-822", "rfc822":
+		return time.RFC822
+	case "822z", "rfc-822z", "rfc822z":
+		return time.RFC822Z
+	case "850", "rfc-850", "rfc850":
+		return time.RFC850
+	case "1123", "rfc-1123", "rfc1123":
+		return time.RFC1123
+	case "1123z", "rfc-1123z", "rfc1123z":
+		return time.RFC1123Z
+	case "3339", "rfc-3339", "rfc3339":
+		return time.RFC3339
+	case "3339n", "3339nano", "rfc-3339nano", "rfc-3339-nano", "rfc3339nano":
+		return time.RFC3339Nano
+	}
+
+	return layout
+}
+
 // ////////////////////////////////////////////////////////////////////////////////// //
 
 // Size returns visual size of the field
@@ -519,7 +633,8 @@ func genUsage() *usage.Info {
 
 	info.AddOption(OPT_FOLLOW, "Read log stream")
 	info.AddOption(OPT_STRICT, "Don't print non-JSON data")
-	info.AddOption(OPT_FIND, "Find and highlight part of message {s}(repeatable){!}")
+	info.AddOption(OPT_FIND, "Find and highlight part of message {s}(repeatable){!}", "text")
+	info.AddOption(OPT_TIME_LAYOUT, "Date/time layout {s-}(name or Go time layout){!}", "layout")
 	info.AddOption(OPT_NO_PAGER, "Disable pager")
 	info.AddOption(OPT_NO_COLOR, "Disable colors in output")
 
@@ -537,7 +652,7 @@ func genUsage() *usage.Info {
 
 	info.AddRawExample(
 		"lj < log.json",
-		"Read log file with redirect",
+		"Read log file from redirect",
 	)
 
 	info.AddRawExample(
@@ -546,8 +661,8 @@ func genUsage() *usage.Info {
 	)
 
 	info.AddRawExample(
-		"tail -100 log.json | lj ",
-		"Read log file from the tail and filter data",
+		"tail -100 log.json | lj -t rfc-850",
+		"Read log file from the tail command and use RFC-850 format for date",
 	)
 
 	info.AddRawExample(
