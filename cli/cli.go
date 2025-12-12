@@ -652,7 +652,7 @@ func genUsage() *usage.Info {
 
 	info.AddRawExample(
 		"lj < log.json",
-		"Read log file with redirect",
+		"Read log file from redirect",
 	)
 
 	info.AddRawExample(
@@ -661,8 +661,8 @@ func genUsage() *usage.Info {
 	)
 
 	info.AddRawExample(
-		"tail -100 log.json | lj",
-		"Read log file from the tail and filter data",
+		"tail -100 log.json | lj -t rfc-850",
+		"Read log file from the tail command and use RFC-850 format for date",
 	)
 
 	info.AddRawExample(
