@@ -3,8 +3,8 @@ module github.com/essentialkaos/lj
 go 1.25.9
 
 require (
-	github.com/essentialkaos/ek/v14 v14.4.2
-	github.com/tidwall/gjson v1.19.0
+	github.com/essentialkaos/ek/v14 v14.4.3
+	github.com/tidwall/gjson v1.19.1
 )
 
 require (
