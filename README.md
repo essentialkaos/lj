@@ -1,8 +1,8 @@
 <p align="center"><a href="#readme"><img src=".github/images/card.svg"/></a></p>
 
 <p align="center">
-  <a href="https://kaos.sh/w/lj/ci-push"><img src="https://kaos.sh/w/lj/ci-push.svg" alt="GitHub Actions CI Status" /></a>
-  <a href="https://kaos.sh/w/lj/codeql"><img src="https://kaos.sh/w/lj/codeql.svg" alt="GitHub Actions CodeQL Status" /></a>
+  <a href="https://kaos.sh/w/lj/ci-push"><img src="https://github.com/essentialkaos/lj/actions/workflows/ci-push.yml/badge.svg" alt="GitHub Actions CI Status" /></a>
+  <a href="https://kaos.sh/w/lj/codeql"><img src="https://github.com/essentialkaos/lj/actions/workflows/codeql.yml/badge.svg" alt="GitHub Actions CodeQL Status" /></a>
   <a href="#license"><img src=".github/images/license.svg"/></a>
 </p>
 
@@ -20,7 +20,7 @@
 
 #### From source
 
-To build the `lj` from scratch, make sure you have a working Go 1.23+ workspace (_[instructions](https://go.dev/doc/install)_), then:
+To build the `lj` from scratch, make sure you have a working Go 1.25+ workspace (_[instructions](https://go.dev/doc/install)_), then:
 
 ```
 go install github.com/essentialkaos/lj@latest
@@ -86,8 +86,8 @@ lj --generate-man | sudo gzip > /usr/share/man/man1/lj.1.gz
 
 | Branch | Status |
 |--------|----------|
-| `master` | [![CI](https://kaos.sh/w/lj/ci-push.svg?branch=master)](https://kaos.sh/w/lj/ci-push?query=branch:master) |
-| `develop` | [![CI](https://kaos.sh/w/lj/ci-push.svg?branch=develop)](https://kaos.sh/w/lj/ci-push?query=branch:develop) |
+| `master` | [![CI](https://github.com/essentialkaos/lj/actions/workflows/ci-push.yml/badge.svg?branch=master)](https://kaos.sh/w/lj/ci-push?query=branch:master) |
+| `develop` | [![CI](https://github.com/essentialkaos/lj/actions/workflows/ci-push.yml/badge.svg?branch=develop)](https://kaos.sh/w/lj/ci-push?query=branch:develop) |
 
 ### Contributing
 
