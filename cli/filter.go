@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/essentialkaos/ek/v13/fmtc"
+	"github.com/essentialkaos/ek/v14/fmtc"
 	"github.com/tidwall/gjson"
 )
 
