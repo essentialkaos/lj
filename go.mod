@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/essentialkaos/ek/v14 v14.4.3
-	github.com/tidwall/gjson v1.20.0
+	github.com/tidwall/gjson v1.20.1
 )
 
 require (
