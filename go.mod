@@ -3,7 +3,7 @@ module github.com/essentialkaos/lj
 go 1.26.0
 
 require (
-	github.com/essentialkaos/ek/v14 v14.6.0
+	github.com/essentialkaos/ek/v14 v14.6.2
 	github.com/tidwall/gjson v1.20.6
 )
 
